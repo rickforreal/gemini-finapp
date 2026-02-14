@@ -1,7 +1,7 @@
 import { buildApp } from './app';
 
 const app = buildApp();
-const port = Number(process.env.PORT) || 3001;
+const port = Number(process.env.PORT) || 8482;
 
 app.listen({ port, host: '0.0.0.0' }, (err, address) => {
   if (err) {

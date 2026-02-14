@@ -1,0 +1,11 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useAppStore } from '../../store/useAppStore';
+import { CollapsibleSection } from '../shared/CollapsibleSection';
+import { SliderInput } from '../shared/SliderInput';
+import { MonthYearPicker } from '../shared/MonthYearPicker';
+export const CoreParameters = () => {
+    const { coreParams, setStartingAge, setRetirementStartDate, setRetirementDuration, setInflationRate, setWithdrawalsStartMonth } = useAppStore();
+    const { startingAge, retirementStartDate, retirementDuration, inflationRate, withdrawalsStartMonth } = coreParams;
+    const Label = ({ children }) => (_jsx("span", { className: "text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block", children: children }));
+    return (_jsxs(CollapsibleSection, { title: "Core Parameters", children: [_jsxs("div", { children: [_jsx(Label, { children: "Starting Age" }), _jsx(SliderInput, { label: "Starting Age", value: startingAge, onChange: setStartingAge, min: 30, max: 85, suffix: "yrs" })] }), _jsxs("div", { children: [_jsx(Label, { children: "Retirement Starts" }), _jsx(MonthYearPicker, { month: retirementStartDate.month, year: retirementStartDate.year, onChange: setRetirementStartDate })] }), _jsxs("div", { children: [_jsx(Label, { children: "Duration" }), _jsx(SliderInput, { label: "Retirement Duration", value: retirementDuration, onChange: setRetirementDuration, min: 5, max: 50, suffix: "yrs", helperText: `${retirementDuration} yrs = ${retirementDuration * 12} months (to age ${startingAge + retirementDuration})` })] }), _jsxs("div", { children: [_jsx(Label, { children: "Exp. Inflation" }), _jsx(SliderInput, { label: "Expected Inflation Rate", value: inflationRate, onChange: setInflationRate, min: 0, max: 0.1, step: 0.001, format: "percent", suffix: "%", helperText: `$1,000 today ≈ $${Math.round(1000 / Math.pow(1 + inflationRate, retirementDuration)).toLocaleString()} in ${retirementDuration} yrs` })] }), _jsxs("div", { children: [_jsx(Label, { children: "Withdrawals Begin" }), _jsx(SliderInput, { label: "Withdrawals Start At", value: withdrawalsStartMonth, onChange: setWithdrawalsStartMonth, min: 1, max: retirementDuration * 12, suffix: "mo", helperText: `Starts in month ${withdrawalsStartMonth}` })] })] }));
+};

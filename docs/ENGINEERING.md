@@ -55,7 +55,7 @@ Minimal for v1:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PORT` | `3001` | Fastify server port |
+| `PORT` | `8482` | Fastify server port |
 | `CLIENT_PORT` | `5173` | Vite dev server port |
 | `LOG_LEVEL` | `info` | Fastify log level |
 

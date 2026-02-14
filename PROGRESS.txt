@@ -1,7 +1,12 @@
-## 2026-02-14 10:45 — P1-T7 | COMPLETE
+## 2026-02-14 14:45 — P7-T6 | COMPLETE
 
-Completed Phase 1: Foundation. Monorepo structure initialized, shared types scaffolded, Fastify server with health endpoint running, and React client with AppShell layout and Zustand store scaffolded. Verified client-server communication via health endpoint.
+Completed Phase 7: Drawdown & Events. Implemented Rebalancing drawdown with Glide Path support. Added Income and Expense event processing with inflation adjustments and multiple cadences. Overhauled DetailTable styling to fix alignment issues using a flex-row system with fixed widths. Added missing columns (Age, Return %, Income, Expenses) and implemented proper yearly aggregation for the Annual view. Expanded the output area to fill the screen width and defaulted the chart to "Real" mode.
 
-## 2026-02-14 10:00 — SESSION START | Phase 1: Foundation
+[DECISION] Standardized DetailTable column widths in pixels to ensure perfect alignment with virtualized rows.
+[DECISION] Implemented cumulative aggregation for annual view (sums for cashflows, geometric mean for returns).
 
-Starting Phase 1. Initialized TASKS.md. Next: P1-T1 (Initialize npm workspaces).
+## 2026-02-14 13:45 — P5-T8 | COMPLETE
+
+Completed Phase 5: Output — Detail Table. Implemented a virtualized ledger using TanStack Table and Virtual. Added Monthly/Annual toggles, Asset Class column toggling, multi-column sorting, and sticky headers. Fixed header and period column stickiness by adjusting z-indexes and background colors. Verified smooth scrolling for 480-row monthly datasets.
+
+## 2026-02-14 13:10 — P4-T8 | COMPLETE

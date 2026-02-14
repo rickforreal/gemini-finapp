@@ -25,5 +25,10 @@
     "prettier": "^3.2.5",
     "typescript": "^5.4.0",
     "vitest": "^1.4.0"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.18",
+    "lucide-react": "^0.564.0"
   }
 }

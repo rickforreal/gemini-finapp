@@ -6,14 +6,14 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@finapp/shared': path.resolve(__dirname, '../shared/src'),
+      '@shared': path.resolve(__dirname, '../shared/src'),
     },
   },
   server: {
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8482',
         changeOrigin: true,
       },
     },
