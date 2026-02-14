@@ -1,17 +1,18 @@
 import React from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import { StatCard } from './StatCard';
-import { SimulationMode } from '@shared/index';
+import { SimulationMode } from '@shared';
 
 export const SummaryStatsBar: React.FC = () => {
   const { simulationResults, simulationMode } = useAppStore();
-  const { manual, status } = simulationResults;
+  const { manual, monteCarlo, status } = simulationResults;
 
+  const activeResult = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
   const cardCount = simulationMode === SimulationMode.MONTE_CARLO ? 9 : 8;
 
-  if (!manual || status === 'idle' || status === 'running') {
+  if (!activeResult || status === 'idle' || status === 'running') {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 w-full animate-pulse">
+      <div className={`grid grid-cols-2 md:grid-cols-4 ${simulationMode === SimulationMode.MONTE_CARLO ? 'xl:grid-cols-9' : 'xl:grid-cols-8'} gap-3 w-full animate-pulse`}>
         {[...Array(cardCount)].map((_, i) => (
           <div key={i} className="h-20 bg-white border border-slate-100 rounded-xl" />
         ))}
@@ -19,12 +20,16 @@ export const SummaryStatsBar: React.FC = () => {
     );
   }
 
-  const { summary } = manual;
+  const { summary } = activeResult;
   const formatCurrency = (cents: number) => 
     `$${Math.round(cents / 100).toLocaleString()}`;
 
+  const successRate = simulationMode === SimulationMode.MONTE_CARLO 
+    ? ((monteCarlo?.probabilityOfSuccess || 0) * 100).toFixed(1) + '%'
+    : null;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 w-full">
+    <div className={`grid grid-cols-2 md:grid-cols-4 ${simulationMode === SimulationMode.MONTE_CARLO ? 'xl:grid-cols-9' : 'xl:grid-cols-8'} gap-3 w-full`}>
       <StatCard 
         label="Total Nominal" 
         value={formatCurrency(summary.withdrawals.totalNominal)} 
@@ -62,7 +67,9 @@ export const SummaryStatsBar: React.FC = () => {
       {simulationMode === SimulationMode.MONTE_CARLO && (
         <StatCard 
           label="Success Rate" 
-          value="--" 
+          value={successRate || '0%'}
+          type="terminal"
+          isSuccess={(monteCarlo?.probabilityOfSuccess || 0) >= 0.9}
         />
       )}
     </div>

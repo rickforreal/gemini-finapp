@@ -1,11 +1,12 @@
-import { AssetClass, WithdrawalStrategyType, SimulationMode } from '../constants/enums';
-export { AssetClass, WithdrawalStrategyType, SimulationMode };
+import { AssetClass, WithdrawalStrategyType, SimulationMode, HistoricalEra } from '../constants/enums';
+export { AssetClass, WithdrawalStrategyType, SimulationMode, HistoricalEra };
 
 export type MonthKey = string; // "YYYY-MM"
 export type Money = number;    // integer cents
 export type Percent = number;  // decimals: 0.04 == 4%
 
 export interface SimulationConfig {
+  mode: SimulationMode;
   calendar: {
     startMonth: MonthKey;
     durationMonths: number;
@@ -28,6 +29,13 @@ export interface SimulationConfig {
     incomes: IncomeStream[];
     expenses?: ExpenseEvent[];
   };
+  monteCarlo?: MonteCarloConfig;
+}
+
+export interface MonteCarloConfig {
+  iterations: number;
+  era: HistoricalEra;
+  seed?: string;
 }
 
 export interface ReturnAssumptions {
@@ -145,4 +153,23 @@ export interface SinglePathResult {
   generatedAt: string;
   rows: MonthRow[];
   summary: SummaryStats;
+}
+
+export interface MonteCarloResult {
+  kind: 'monte-carlo';
+  requestHash: string;
+  generatedAt: string;
+  iterations: number;
+  probabilityOfSuccess: Percent;
+  summary: SummaryStats; // Based on median path
+  percentiles: {
+    p5: MonthRow[];
+    p10: MonthRow[];
+    p25: MonthRow[];
+    p50: MonthRow[];
+    p75: MonthRow[];
+    p90: MonthRow[];
+    p95: MonthRow[];
+  };
+  terminalValues: Money[]; // For histogram
 }

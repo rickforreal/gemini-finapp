@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../../store/useAppStore';
-import { MonthRow, AssetClass } from '@shared/index';
+import { MonthRow, AssetClass, SimulationMode, SinglePathResult, MonteCarloResult } from '@shared';
 import { SegmentedToggle } from '../../shared/SegmentedToggle';
 import { Table, PieChart as PieChartIcon, ArrowUpDown, ArrowUp, ArrowDown, Maximize2, Minimize2 } from 'lucide-react';
 
@@ -21,10 +21,11 @@ export const DetailTable: React.FC = () => {
     ui, 
     setTableGranularity, 
     setTableAssetColumnsEnabled,
-    setSpreadsheetMode
+    setSpreadsheetMode,
+    simulationMode
   } = useAppStore();
   
-  const { manual, status } = simulationResults;
+  const { manual, monteCarlo, status } = simulationResults;
   const { tableGranularity, tableAssetColumnsEnabled, spreadsheetMode } = ui;
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -33,14 +34,22 @@ export const DetailTable: React.FC = () => {
     `$${Math.round(cents / 100).toLocaleString()}`;
 
   const data = useMemo(() => {
-    if (!manual) return [];
+    const activeResult: SinglePathResult | MonteCarloResult | null = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
+    if (!activeResult) return [];
     
-    if (tableGranularity === 'monthly') return manual.rows;
+    let rows: MonthRow[] = [];
+    if (activeResult.kind === 'monte-carlo') {
+      rows = activeResult.percentiles.p50;
+    } else {
+      rows = activeResult.rows;
+    }
+
+    if (tableGranularity === 'monthly') return rows;
 
     // Annual aggregation
     const annualRows: MonthRow[] = [];
-    for (let i = 0; i < manual.rows.length; i += 12) {
-      const yearMonths = manual.rows.slice(i, i + 12);
+    for (let i = 0; i < rows.length; i += 12) {
+      const yearMonths = rows.slice(i, i + 12);
       if (yearMonths.length === 0) break;
 
       const firstMonth = yearMonths[0];
@@ -51,27 +60,27 @@ export const DetailTable: React.FC = () => {
         startBalances: firstMonth.startBalances,
         endBalances: lastMonth.endBalances,
         movement: {
-          nominalChange: yearMonths.reduce((sum, m) => sum + m.movement.nominalChange, 0),
-          percentChange: yearMonths.reduce((prod, m) => prod * (1 + m.movement.percentChange), 1) - 1,
+          nominalChange: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.movement.nominalChange, 0),
+          percentChange: yearMonths.reduce((prod: number, m: MonthRow) => prod * (1 + m.movement.percentChange), 1) - 1,
         },
         cashflows: {
-          incomeTotal: yearMonths.reduce((sum, m) => sum + m.cashflows.incomeTotal, 0),
-          expenseTotal: yearMonths.reduce((sum, m) => sum + m.cashflows.expenseTotal, 0),
+          incomeTotal: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.cashflows.incomeTotal, 0),
+          expenseTotal: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.cashflows.expenseTotal, 0),
         },
         withdrawals: {
-          nominalTotal: yearMonths.reduce((sum, m) => sum + m.withdrawals.nominalTotal, 0),
-          realTotal: yearMonths.reduce((sum, m) => sum + m.withdrawals.realTotal, 0),
+          nominalTotal: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.withdrawals.nominalTotal, 0),
+          realTotal: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.withdrawals.realTotal, 0),
           byAsset: {
-            [AssetClass.STOCKS]: yearMonths.reduce((sum, m) => sum + m.withdrawals.byAsset[AssetClass.STOCKS], 0),
-            [AssetClass.BONDS]: yearMonths.reduce((sum, m) => sum + m.withdrawals.byAsset[AssetClass.BONDS], 0),
-            [AssetClass.CASH]: yearMonths.reduce((sum, m) => sum + m.withdrawals.byAsset[AssetClass.CASH], 0),
+            [AssetClass.STOCKS]: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.withdrawals.byAsset[AssetClass.STOCKS], 0),
+            [AssetClass.BONDS]: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.withdrawals.byAsset[AssetClass.BONDS], 0),
+            [AssetClass.CASH]: yearMonths.reduce((sum: number, m: MonthRow) => sum + m.withdrawals.byAsset[AssetClass.CASH], 0),
           }
         }
       };
       annualRows.push(aggregatedRow);
     }
     return annualRows;
-  }, [manual, tableGranularity]);
+  }, [manual, monteCarlo, tableGranularity, simulationMode]);
 
   const columns = useMemo(() => [
     columnHelper.accessor('month', {
@@ -91,8 +100,10 @@ export const DetailTable: React.FC = () => {
       size: 120,
     }),
     columnHelper.accessor((row) => {
+      const activeResult: SinglePathResult | MonteCarloResult | null = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
+      const rows = activeResult?.kind === 'monte-carlo' ? activeResult.percentiles.p50 : activeResult?.rows;
       const startAge = useAppStore.getState().coreParams.startingAge;
-      const index = manual?.rows.findIndex(r => r.month === row.month) ?? -1;
+      const index = (rows as any[])?.findIndex((r: any) => r.month === row.month) ?? -1;
       if (index === -1) {
         const yearMatch = row.month.match(/Year (\d+)/);
         if (yearMatch) return startAge + parseInt(yearMatch[1]) - 1;
@@ -171,7 +182,7 @@ export const DetailTable: React.FC = () => {
       cell: (info) => <span className="font-bold">{formatCurrency(info.getValue())}</span>,
       size: 140,
     }),
-  ], [tableAssetColumnsEnabled, manual, tableGranularity]);
+  ], [tableAssetColumnsEnabled, manual, monteCarlo, tableGranularity, simulationMode]);
 
   const table = useReactTable({
     data,
@@ -191,21 +202,27 @@ export const DetailTable: React.FC = () => {
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 40,
-    overscan: spreadsheetMode ? rows.length : 10, // Render all if spreadsheet mode
-    enabled: !spreadsheetMode, // Actually disable virtualizer logic if not needed
+    overscan: spreadsheetMode ? rows.length : 10,
+    enabled: !spreadsheetMode,
   });
 
-  if (!manual || status === 'idle') return null;
+  const activeResult = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
+  if (!activeResult || status === 'idle') return null;
 
   const tableWidth = table.getTotalSize();
 
   return (
-    <div className={`flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden`}>
+    <div className="flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-          <Table size={16} className="text-blue-600" />
-          Detail Ledger
-        </h3>
+        <div>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+            <Table size={16} className="text-blue-600" />
+            {simulationMode === SimulationMode.MONTE_CARLO ? 'Detail Ledger (Median Path)' : 'Detail Ledger'}
+          </h3>
+          {simulationMode === SimulationMode.MONTE_CARLO && (
+            <p className="text-[10px] text-slate-400 mt-0.5 ml-6 italic">Showing values for the 50th percentile outcome</p>
+          )}
+        </div>
         
         <div className="flex items-center gap-4">
           <SegmentedToggle
@@ -276,7 +293,6 @@ export const DetailTable: React.FC = () => {
             }}
           >
             {spreadsheetMode ? (
-              // Spreadsheet Mode: Render all rows directly
               table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
@@ -297,7 +313,6 @@ export const DetailTable: React.FC = () => {
                 </tr>
               ))
             ) : (
-              // Normal Mode: Virtualized rendering
               rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const row = rows[virtualRow.index];
                 return (

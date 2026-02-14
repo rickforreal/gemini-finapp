@@ -5,7 +5,7 @@ import {
   AssetClass, 
   Money, 
   MonthKey
-} from '@shared/domain/simulation';
+} from '@shared';
 import { strategyRegistry } from './strategies';
 import { bucketDrawdown } from './drawdown/bucket';
 import { rebalancingDrawdown } from './drawdown/rebalancing';
@@ -23,7 +23,8 @@ export function simulateRetirement(
   config: SimulationConfig,
   returns: MonthlyReturns[],
   requestHash: string = '',
-  kind: 'manual' | 'deterministic' = 'manual'
+  kind: 'manual' | 'deterministic' = 'manual',
+  capeRatios?: number[]
 ): SinglePathResult {
   const { calendar, economics, portfolio, spending, withdrawalStrategy } = config;
   const { durationMonths, startMonth } = calendar;
@@ -100,6 +101,7 @@ export function simulateRetirement(
         remainingYears: Math.ceil((durationMonths - m) / 12),
         inflationRate: annualInflationRate,
         params: withdrawalStrategy.params,
+        capeRatio: capeRatios ? capeRatios[m] : undefined,
       };
       
       const annualWithdrawal = strategyFn(context);
@@ -202,8 +204,8 @@ export function simulateRetirement(
 
   const summary = {
     endOfHorizon: {
-      nominalEndBalance: Object.values(finalRow.endBalances).reduce((a, b) => a + b, 0),
-      realEndBalance: roundToCents(Object.values(finalRow.endBalances).reduce((a, b) => a + b, 0) / Math.pow(1 + annualInflationRate, Math.floor(durationMonths / 12))),
+      nominalEndBalance: (Object.values(finalRow.endBalances) as number[]).reduce((a, b) => a + b, 0),
+      realEndBalance: roundToCents((Object.values(finalRow.endBalances) as number[]).reduce((a, b) => a + b, 0) / Math.pow(1 + annualInflationRate, Math.floor(durationMonths / 12))),
     },
     withdrawals: {
       totalNominal: totalNominalWithdrawal,

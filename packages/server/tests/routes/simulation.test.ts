@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { buildApp } from '../../src/app';
-import { AssetClass, WithdrawalStrategyType } from '@shared/index';
+import { AssetClass, WithdrawalStrategyType } from '@shared';
 
 describe('POST /api/v1/simulate', () => {
   let app: any;
@@ -16,6 +16,7 @@ describe('POST /api/v1/simulate', () => {
       payload: {
         mode: 'planning',
         config: {
+          mode: 'manual',
           calendar: {
             startMonth: '2026-01',
             durationMonths: 12,

@@ -28,3 +28,14 @@ export enum AppMode {
   PLANNING = 'planning',
   TRACKING = 'tracking'
 }
+
+export enum HistoricalEra {
+  FULL_HISTORY = 'full-history',
+  POST_WAR = 'post-war',
+  MODERN_ERA = 'modern-era',
+  STAGFLATION = 'stagflation',
+  LOW_YIELD = 'low-yield',
+  GFC_RECOVERY = 'gfc-recovery',
+  DOT_COM_CRASH = 'dot-com-crash',
+  LOST_DECADE = 'lost-decade'
+}

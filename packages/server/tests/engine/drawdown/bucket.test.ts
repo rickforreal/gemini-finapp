@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { bucketDrawdown } from '../../../src/engine/drawdown/bucket';
-import { AssetClass } from '@shared/constants/enums';
+import { AssetClass } from '@shared';
 
 describe('bucketDrawdown', () => {
   it('should deplete asset classes in order', () => {

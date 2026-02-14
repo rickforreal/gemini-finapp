@@ -1,7 +1,9 @@
-import React from 'react';
+import { SimulationMode } from '@shared';
+import { useAppStore } from '../../store/useAppStore';
 import { CoreParameters } from '../inputs/CoreParameters';
 import { StartingPortfolio } from '../inputs/StartingPortfolio';
 import { ReturnAssumptions } from '../inputs/ReturnAssumptions';
+import { HistoricalDataSummary } from '../inputs/HistoricalDataSummary';
 import { SpendingPhases } from '../inputs/SpendingPhases';
 import { WithdrawalStrategy } from '../inputs/WithdrawalStrategy';
 import { DrawdownStrategy } from '../inputs/DrawdownStrategy';
@@ -9,6 +11,8 @@ import { IncomeEvents } from '../inputs/IncomeEvents/IncomeEvents';
 import { ExpenseEvents } from '../inputs/ExpenseEvents/ExpenseEvents';
 
 export const Sidebar: React.FC = () => {
+  const { simulationMode } = useAppStore();
+
   return (
     <aside className="w-80 h-full bg-white border-r border-slate-200 flex flex-col shrink-0">
       <div className="p-4 border-b border-slate-200 flex items-center gap-2">
@@ -20,20 +24,18 @@ export const Sidebar: React.FC = () => {
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <CoreParameters />
         <StartingPortfolio />
-        <ReturnAssumptions />
+        
+        {simulationMode === SimulationMode.MANUAL ? (
+          <ReturnAssumptions />
+        ) : (
+          <HistoricalDataSummary />
+        )}
+
         <SpendingPhases />
         <WithdrawalStrategy />
         <DrawdownStrategy />
         <IncomeEvents />
         <ExpenseEvents />
-        <div className="p-4">
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-            <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">Phase 3: Input Panel</h4>
-            <p className="text-[11px] text-blue-600 leading-relaxed">
-              All sidebar sections are now wired to the store. Change any value to see reactivity in future phases.
-            </p>
-          </div>
-        </div>
       </div>
     </aside>
   );

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { strategyRegistry } from '../../../src/engine/strategies';
-import { WithdrawalStrategyType } from '@shared/constants/enums';
+import { WithdrawalStrategyType } from '@shared';
 import { StrategyContext } from '../../../src/engine/strategies/types';
 
 describe('Withdrawal Strategies', () => {

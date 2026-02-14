@@ -1,4 +1,4 @@
-import { WithdrawalStrategyType } from '@shared/constants/enums';
+import { WithdrawalStrategyType } from '@shared';
 import { StrategyFunction } from './types';
 import { constantDollar } from './constantDollar';
 import { percentOfPortfolio } from './percentOfPortfolio';

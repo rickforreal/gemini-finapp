@@ -1,8 +1,9 @@
 import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { AppMode, SimulationMode, AssetClass } from '@shared/index';
+import { AppMode, SimulationMode, AssetClass, HistoricalEra } from '@shared';
 import { SegmentedToggle } from '../shared/SegmentedToggle';
-import { Play, LineChart, BarChart } from 'lucide-react';
+import { Dropdown } from '../shared/Dropdown';
+import { Play, LineChart, BarChart, History } from 'lucide-react';
 
 export const CommandBar: React.FC = () => {
   const { 
@@ -13,7 +14,10 @@ export const CommandBar: React.FC = () => {
     simulationResults,
     setSimulationStatus,
     setManualResult,
-    setSimulationError
+    setMonteCarloResult,
+    setSimulationError,
+    monteCarloConfig,
+    setHistoricalEra
   } = useAppStore();
 
   const handleRun = async () => {
@@ -28,7 +32,8 @@ export const CommandBar: React.FC = () => {
       spendingPhases,
       withdrawalStrategy,
       drawdownStrategy,
-      mode
+      simulationMode,
+      monteCarloConfig
     } = useAppStore.getState();
 
     // Map return assumptions from store format to API format
@@ -45,8 +50,9 @@ export const CommandBar: React.FC = () => {
     };
 
     const request = {
-      mode,
+      mode: simulationMode,
       config: {
+        mode: simulationMode,
         calendar: {
           startMonth: `${coreParams.retirementStartDate.year}-${coreParams.retirementStartDate.month.toString().padStart(2, '0')}`,
           durationMonths: coreParams.retirementDuration * 12,
@@ -86,6 +92,7 @@ export const CommandBar: React.FC = () => {
           incomes: incomeEvents,
           expenses: expenseEvents,
         },
+        monteCarlo: simulationMode === SimulationMode.MONTE_CARLO ? monteCarloConfig : undefined,
       },
     };
 
@@ -107,7 +114,11 @@ export const CommandBar: React.FC = () => {
       }
       
       const result = await response.json();
-      setManualResult(result);
+      if (simulationMode === SimulationMode.MONTE_CARLO) {
+        setMonteCarloResult(result);
+      } else {
+        setManualResult(result);
+      }
     } catch (error: any) {
       console.error(error);
       setSimulationError(error.message);
@@ -115,6 +126,17 @@ export const CommandBar: React.FC = () => {
       setTimeout(() => setSimulationStatus('idle'), 5000);
     }
   };
+
+  const eraOptions = [
+    { label: 'Full History (1926-2024)', value: HistoricalEra.FULL_HISTORY },
+    { label: 'Post-War (1946-2024)', value: HistoricalEra.POST_WAR },
+    { label: 'Modern Era (1980-2024)', value: HistoricalEra.MODERN_ERA },
+    { label: 'Stagflation (1966-1982)', value: HistoricalEra.STAGFLATION },
+    { label: 'Low Yield Era (2008-2021)', value: HistoricalEra.LOW_YIELD },
+    { label: 'GFC & Recovery (2009-2019)', value: HistoricalEra.GFC_RECOVERY },
+    { label: 'Dot-com Crash (2000-2002)', value: HistoricalEra.DOT_COM_CRASH },
+    { label: 'Lost Decade (2000-2009)', value: HistoricalEra.LOST_DECADE },
+  ];
 
   const getButtonContent = () => {
     if (simulationResults.status === 'running') return 'Running...';
@@ -150,6 +172,20 @@ export const CommandBar: React.FC = () => {
             size="sm"
           />
         </div>
+
+        {simulationMode === SimulationMode.MONTE_CARLO && (
+          <div className="flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+              <History size={10} />
+              Historical Era
+            </span>
+            <Dropdown
+              options={eraOptions}
+              value={monteCarloConfig.era}
+              onChange={(val) => setHistoricalEra(val as HistoricalEra)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

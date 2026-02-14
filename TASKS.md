@@ -84,3 +84,15 @@
 - [x] P7-T4: Implement `RebalancingConfig` and `GlidePathEditor` UI
 - [x] P7-T5: Add inflation adjustment and recurrence logic for events
 - [x] P7-T6: Verify Phase 7 DoD (Events affect portfolio, rebalancing works)
+
+## Phase 8: Monte Carlo
+
+**Goal:** Monte Carlo simulation mode is fully functional — historical data drives 1,000 simulations, confidence bands render on the chart, and probability of success is displayed.
+
+- [x] P8-T1: Implement `HistoricalDataReader` in the engine
+- [x] P8-T2: Implement `MonteCarloRunner` with sampling and percentile logic
+- [x] P8-T3: Extend `/api/v1/simulate` to support Monte Carlo results
+- [x] P8-T4: Build `HistoricalEraSelector` and MC-specific UI components
+- [x] P8-T5: Implement `ConfidenceBands` in the portfolio chart
+- [x] P8-T6: Add `ProbabilityOfSuccess` stat card logic and thresholds
+- [x] P8-T7: Verify Phase 8 DoD (1,000 runs < 3s, bands render correctly)

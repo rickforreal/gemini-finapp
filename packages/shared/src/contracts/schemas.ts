@@ -1,11 +1,17 @@
 import { z } from 'zod';
-import { AssetClass, WithdrawalStrategyType } from '../constants/enums';
-
-export const MonthKeySchema = z.string().regex(/^\d{4}-\d{2}$/);
+import { AssetClass, WithdrawalStrategyType, SimulationMode, HistoricalEra } from '../constants/enums';
 
 export const MoneySchema = z.number().int();
-
 export const PercentSchema = z.number();
+export const MonthKeySchema = z.string().regex(/^\d{4}-\d{2}$/);
+
+export const HistoricalEraSchema = z.nativeEnum(HistoricalEra);
+
+export const MonteCarloConfigSchema = z.object({
+  iterations: z.number().int().min(1).max(5000),
+  era: HistoricalEraSchema,
+  seed: z.string().optional(),
+});
 
 export const ReturnAssumptionsSchema = z.object({
   annualExpectedReturn: z.record(z.nativeEnum(AssetClass), PercentSchema),
@@ -13,10 +19,35 @@ export const ReturnAssumptionsSchema = z.object({
   annualFeeRate: PercentSchema.optional(),
 });
 
-export const SpendingPolicySchema = z.object({
-  monthlyMinSpend: MoneySchema,
-  monthlyMaxSpend: MoneySchema,
-  monthlyTargetSpend: MoneySchema.optional(),
+export const EscalationSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('none') }),
+  z.object({ kind: z.literal('cpiLinked') }),
+  z.object({ kind: z.literal('fixedRate'), annualRate: PercentSchema }),
+]);
+
+export const IncomeStreamSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  amount: MoneySchema,
+  startMonth: MonthKeySchema,
+  endMonth: MonthKeySchema.optional(),
+  cadence: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('oneTime') }),
+    z.object({ kind: z.literal('monthly') }),
+    z.object({ kind: z.literal('annual'), monthOfYear: z.number().int().min(1).max(12) }),
+    z.object({ kind: z.literal('custom'), everyNMonths: z.number().int().min(1) }),
+  ]),
+  escalation: EscalationSchema,
+  depositTo: z.nativeEnum(AssetClass),
+});
+
+export const ExpenseEventSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  amount: MoneySchema,
+  startMonth: MonthKeySchema,
+  durationMonths: z.number().int().min(1),
+  escalation: EscalationSchema,
 });
 
 export const WithdrawalStrategyConfigSchema = z.discriminatedUnion('kind', [
@@ -46,47 +77,15 @@ export const DrawdownStrategyConfigSchema = z.discriminatedUnion('kind', [
   }) }),
 ]);
 
-export const CadenceSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('oneTime') }),
-  z.object({ kind: z.literal('monthly') }),
-  z.object({ kind: z.literal('annual'), monthOfYear: z.number().min(1).max(12) }),
-  z.object({ kind: z.literal('custom'), everyNMonths: z.number().min(1) }),
-]);
-
-export const EscalationSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('none') }),
-  z.object({ kind: z.literal('cpiLinked') }),
-  z.object({ kind: z.literal('fixedRate'), annualRate: PercentSchema }),
-]);
-
-export const IncomeStreamSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  amount: MoneySchema,
-  startMonth: MonthKeySchema,
-  endMonth: MonthKeySchema.optional(),
-  cadence: CadenceSchema,
-  escalation: EscalationSchema,
-  depositTo: z.nativeEnum(AssetClass),
-});
-
-export const ExpenseEventSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  amount: MoneySchema,
-  startMonth: MonthKeySchema,
-  durationMonths: z.number().min(1),
-  escalation: EscalationSchema,
-});
-
 export const SimulationConfigSchema = z.object({
+  mode: z.nativeEnum(SimulationMode),
   calendar: z.object({
     startMonth: MonthKeySchema,
-    durationMonths: z.number().min(1).max(1200),
+    durationMonths: z.number().int().min(1).max(1200),
   }),
   core: z.object({
-    startingAgeYears: z.number().min(0).max(120),
-    withdrawalsStartMonth: z.number().min(1).max(1200),
+    startingAgeYears: z.number().int(),
+    withdrawalsStartMonth: z.number().int(),
   }),
   economics: z.object({
     annualInflationRate: PercentSchema,
@@ -95,25 +94,20 @@ export const SimulationConfigSchema = z.object({
     startingBalances: z.record(z.nativeEnum(AssetClass), MoneySchema),
     assumptions: ReturnAssumptionsSchema,
   }),
-  spending: SpendingPolicySchema,
+  spending: z.object({
+    monthlyMinSpend: MoneySchema,
+    monthlyMaxSpend: MoneySchema,
+    monthlyTargetSpend: MoneySchema.optional(),
+  }),
   withdrawalStrategy: WithdrawalStrategyConfigSchema,
   drawdownStrategy: DrawdownStrategyConfigSchema,
   cashflows: z.object({
     incomes: z.array(IncomeStreamSchema),
     expenses: z.array(ExpenseEventSchema).optional(),
   }),
+  monteCarlo: MonteCarloConfigSchema.optional(),
 });
 
 export const SimulateRequestSchema = z.object({
   config: SimulationConfigSchema,
-  // tracking is optional for Phase 2
-  tracking: z.object({
-    actualsByMonth: z.record(MonthKeySchema, z.any()),
-  }).optional(),
-  mode: z.enum(['planning', 'tracking']),
-  options: z.object({
-    seed: z.number().optional(),
-    includeRows: z.boolean().optional(),
-    includeReal: z.boolean().optional(),
-  }).optional(),
 });

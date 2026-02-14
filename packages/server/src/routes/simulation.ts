@@ -1,7 +1,12 @@
 import { FastifyInstance } from 'fastify';
-import { SimulateRequestSchema, AssetClass } from '@shared/index';
+import { 
+  SimulateRequestSchema, 
+  AssetClass, 
+  SimulationMode 
+} from '@shared';
 import { simulateRetirement, MonthlyReturns } from '../engine/simulator';
 import { generateRandomMonthlyReturn } from '../engine/helpers/returns';
+import { runMonteCarlo } from '../engine/monteCarlo';
 
 export default async function simulationRoutes(fastify: FastifyInstance) {
   fastify.post('/simulate', async (request, reply) => {
@@ -13,7 +18,7 @@ export default async function simulationRoutes(fastify: FastifyInstance) {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid simulation configuration',
-          details: parseResult.error.issues.map(i => ({
+          details: parseResult.error.issues.map((i: any) => ({
             path: i.path.join('.'),
             message: i.message
           }))
@@ -22,9 +27,22 @@ export default async function simulationRoutes(fastify: FastifyInstance) {
     }
 
     const { config } = parseResult.data;
+
+    if (config.mode === SimulationMode.MONTE_CARLO) {
+      if (!config.monteCarlo) {
+        return reply.status(400).send({
+          error: {
+            code: 'MISSING_MC_CONFIG',
+            message: 'Monte Carlo configuration is required for MC mode'
+          }
+        });
+      }
+      const result = await runMonteCarlo(config as any);
+      return result;
+    }
+
+    // Manual mode
     const { durationMonths } = config.calendar;
-    
-    // Generate random returns for each month (Manual mode)
     const returns: MonthlyReturns[] = [];
     for (let m = 0; m < durationMonths; m++) {
       returns.push({
@@ -44,7 +62,6 @@ export default async function simulationRoutes(fastify: FastifyInstance) {
     }
 
     const result = simulateRetirement(config as any, returns, 'todo-hash', 'manual');
-    
     return result;
   });
 }

@@ -1,13 +1,14 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useAppStore } from '../../store/useAppStore';
-import { AppMode, SimulationMode, AssetClass } from '@shared/index';
+import { AppMode, SimulationMode, AssetClass, HistoricalEra } from '@shared';
 import { SegmentedToggle } from '../shared/SegmentedToggle';
-import { Play, LineChart, BarChart } from 'lucide-react';
+import { Dropdown } from '../shared/Dropdown';
+import { Play, LineChart, BarChart, History } from 'lucide-react';
 export const CommandBar = () => {
-    const { mode, setMode, simulationMode, setSimulationMode, simulationResults, setSimulationStatus, setManualResult, setSimulationError } = useAppStore();
+    const { mode, setMode, simulationMode, setSimulationMode, simulationResults, setSimulationStatus, setManualResult, setMonteCarloResult, setSimulationError, monteCarloConfig, setHistoricalEra } = useAppStore();
     const handleRun = async () => {
         setSimulationStatus('running');
-        const { incomeEvents, expenseEvents, coreParams, portfolio, returnAssumptions, spendingPhases, withdrawalStrategy, drawdownStrategy, mode } = useAppStore.getState();
+        const { incomeEvents, expenseEvents, coreParams, portfolio, returnAssumptions, spendingPhases, withdrawalStrategy, drawdownStrategy, simulationMode, monteCarloConfig } = useAppStore.getState();
         // Map return assumptions from store format to API format
         const annualExpectedReturn = {
             [AssetClass.STOCKS]: returnAssumptions.stocks.expectedReturn,
@@ -20,8 +21,9 @@ export const CommandBar = () => {
             [AssetClass.CASH]: returnAssumptions.cash.stdDev,
         };
         const request = {
-            mode,
+            mode: simulationMode,
             config: {
+                mode: simulationMode,
                 calendar: {
                     startMonth: `${coreParams.retirementStartDate.year}-${coreParams.retirementStartDate.month.toString().padStart(2, '0')}`,
                     durationMonths: coreParams.retirementDuration * 12,
@@ -61,6 +63,7 @@ export const CommandBar = () => {
                     incomes: incomeEvents,
                     expenses: expenseEvents,
                 },
+                monteCarlo: simulationMode === SimulationMode.MONTE_CARLO ? monteCarloConfig : undefined,
             },
         };
         console.log('Sending Simulation Request:', request);
@@ -78,7 +81,12 @@ export const CommandBar = () => {
                 throw new Error(`${message}${details}`);
             }
             const result = await response.json();
-            setManualResult(result);
+            if (simulationMode === SimulationMode.MONTE_CARLO) {
+                setMonteCarloResult(result);
+            }
+            else {
+                setManualResult(result);
+            }
         }
         catch (error) {
             console.error(error);
@@ -87,6 +95,16 @@ export const CommandBar = () => {
             setTimeout(() => setSimulationStatus('idle'), 5000);
         }
     };
+    const eraOptions = [
+        { label: 'Full History (1926-2024)', value: HistoricalEra.FULL_HISTORY },
+        { label: 'Post-War (1946-2024)', value: HistoricalEra.POST_WAR },
+        { label: 'Modern Era (1980-2024)', value: HistoricalEra.MODERN_ERA },
+        { label: 'Stagflation (1966-1982)', value: HistoricalEra.STAGFLATION },
+        { label: 'Low Yield Era (2008-2021)', value: HistoricalEra.LOW_YIELD },
+        { label: 'GFC & Recovery (2009-2019)', value: HistoricalEra.GFC_RECOVERY },
+        { label: 'Dot-com Crash (2000-2002)', value: HistoricalEra.DOT_COM_CRASH },
+        { label: 'Lost Decade (2000-2009)', value: HistoricalEra.LOST_DECADE },
+    ];
     const getButtonContent = () => {
         if (simulationResults.status === 'running')
             return 'Running...';
@@ -100,7 +118,7 @@ export const CommandBar = () => {
                                 ], value: mode, onChange: setMode, size: "sm" })] }), _jsxs("div", { className: "flex flex-col gap-0.5", children: [_jsx("span", { className: "text-[10px] font-bold text-slate-400 uppercase tracking-widest", children: "Simulation Type" }), _jsx(SegmentedToggle, { options: [
                                     { label: 'Manual', value: SimulationMode.MANUAL, icon: _jsx(LineChart, { size: 14 }) },
                                     { label: 'Monte Carlo', value: SimulationMode.MONTE_CARLO, icon: _jsx(BarChart, { size: 14 }) },
-                                ], value: simulationMode, onChange: setSimulationMode, size: "sm" })] })] }), _jsx("div", { className: "flex items-center gap-4", children: _jsxs("button", { onClick: handleRun, disabled: simulationResults.status === 'running', className: `
+                                ], value: simulationMode, onChange: setSimulationMode, size: "sm" })] }), simulationMode === SimulationMode.MONTE_CARLO && (_jsxs("div", { className: "flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-2", children: [_jsxs("span", { className: "text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1", children: [_jsx(History, { size: 10 }), "Historical Era"] }), _jsx(Dropdown, { options: eraOptions, value: monteCarloConfig.era, onChange: (val) => setHistoricalEra(val) })] }))] }), _jsx("div", { className: "flex items-center gap-4", children: _jsxs("button", { onClick: handleRun, disabled: simulationResults.status === 'running', className: `
             flex items-center gap-2 px-6 h-10 rounded-lg text-sm font-bold transition-all
             ${simulationResults.status === 'running'
                         ? 'bg-slate-100 text-slate-400 cursor-not-allowed'

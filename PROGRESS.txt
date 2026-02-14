@@ -1,60 +1,9 @@
+## 2026-02-14 19:45 — P8-T7 | COMPLETE
+
+Completed Phase 8: Monte Carlo. Implemented historical return sampling from 1926-2024 data with era filtering. Built a high-performance Monte Carlo runner capable of 1,000 simulations in ~1.1s. Integrated MC results into the UI with layered confidence bands (5th-95th percentiles) and a color-coded Probability of Success stat card.
+
+[DECISION] Optimized MC runner by using TypedArrays (Float64Array) and single-pass percentile calculations to meet performance targets.
+[DECISION] Modified simulator to support external return sequences and CAPE ratios for historical accuracy.
+[DECISION] Standardized all @shared imports across the server package and verified with full typecheck.
+
 ## 2026-02-14 19:15 — P7-T6 | COMPLETE
-
-Completed Phase 7 enhancement: Spreadsheet Mode. Implemented a toggle for the Detail Table that disables virtualization and fixed heights, allowing the table to expand fully and render all rows inline without an internal scrollbar.
-
-[DECISION] Conditionally disabled TanStack Virtual when spreadsheetMode is active to improve performance for full-page renders.
-
-## 2026-02-14 18:50 — P7-T6 | COMPLETE
-
-Verified Phase 7 implementation. Successfully implemented Rebalancing drawdown with Glide Path interpolation and integrated Income/Expense event processing with inflation escalation.
-
-[DECISION] Fixed DetailTable alignment by switching to a flex-row system with fixed pixel widths for all columns.
-[DECISION] Implemented yearly aggregation for Annual view, including geometric mean for returns and summation for cashflows.
-[DECISION] Overhauled input panel layout to remove inline labels (preventing bleed) and repositioned StrategyTooltips to fixed viewport coordinates to prevent clipping.
-
-## 2026-02-14 18:30 — P7-T4 | COMPLETE
-
-Implemented RebalancingConfig and GlidePathEditor UI. Added glide path management actions to the drawdown store slice.
-
-[DECISION] Synchronized the first glide path waypoint with the base target allocation to ensure consistency.
-
-## 2026-02-14 18:10 — P7-T3 | COMPLETE
-
-Built IncomeEvents and ExpenseEvents UI components with preset support. Wired events to the store and included them in the simulation API request.
-
-## 2026-02-14 17:50 — P7-T1 | COMPLETE
-
-Implemented Rebalancing drawdown algorithm in the engine. Added logic to source from overweight asset classes proportionally.
-
-## 2026-02-14 17:30 — P6-T5 | COMPLETE
-
-Implemented all 11 remaining withdrawal strategies (VPW, Guyton-Klinger, etc.) in the engine and built dynamic StrategyParams panels for each.
-
-[DECISION] Added a 'previousYearReturn' calculation to the simulator loop to support guardrail-based strategies like Guyton-Klinger.
-
-## 2026-02-14 16:00 — P5-T8 | COMPLETE
-
-Completed Detail Table implementation with row virtualization using TanStack Table and Virtual. Supported 480-row monthly datasets with 60fps scroll performance.
-
-## 2026-02-14 15:30 — P4-T8 | COMPLETE
-
-Implemented SummaryStatsBar and PortfolioChart using Recharts. Wired "Run Simulation" button to the API.
-
-[DECISION] Defaulted chart to 'real' dollars in the UI slice.
-[DECISION] Switched SummaryStatsBar to an 8-column grid to eliminate horizontal scrolling.
-
-## 2026-02-14 14:00 — P3-T8 | COMPLETE
-
-Built the high-density Input Panel with all shared components (NumericInput, SliderInput, etc.) and wired all sidebar sections to the Zustand store.
-
-[ASSUMPTION] Used crypto.randomUUID() for event IDs.
-
-## 2026-02-14 11:30 — P2-T8 | COMPLETE
-
-Implemented core Simulation Engine Core. Built month-by-month loop, math helpers (PMT, rounding, inflation), and Constant Dollar strategy.
-
-[DECISION] Used integer cents for all monetary values throughout the system to ensure mathematical precision and prevent drift.
-
-## 2026-02-14 10:45 — P1-T7 | COMPLETE
-
-Completed Phase 1: Foundation. Monorepo structure initialized, shared types scaffolded, Fastify server running on port 8482, and React client connected.

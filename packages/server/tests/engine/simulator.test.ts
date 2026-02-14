@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { simulateRetirement, MonthlyReturns } from '../../src/engine/simulator';
-import { AssetClass, WithdrawalStrategyType } from '@shared/constants/enums';
-import { SimulationConfig } from '@shared/domain/simulation';
+import { AssetClass, WithdrawalStrategyType } from '@shared';
+import { SimulationConfig } from '@shared';
 
 describe('simulator', () => {
   const config: SimulationConfig = {

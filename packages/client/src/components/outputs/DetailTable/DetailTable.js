@@ -3,25 +3,33 @@ import React, { useMemo, useRef } from 'react';
 import { createColumnHelper, flexRender, getCoreRowModel, getSortedRowModel, useReactTable, } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../../store/useAppStore';
-import { AssetClass } from '@shared/index';
+import { AssetClass, SimulationMode } from '@shared';
 import { SegmentedToggle } from '../../shared/SegmentedToggle';
 import { Table, PieChart as PieChartIcon, ArrowUpDown, ArrowUp, ArrowDown, Maximize2, Minimize2 } from 'lucide-react';
 const columnHelper = createColumnHelper();
 export const DetailTable = () => {
-    const { simulationResults, ui, setTableGranularity, setTableAssetColumnsEnabled, setSpreadsheetMode } = useAppStore();
-    const { manual, status } = simulationResults;
+    const { simulationResults, ui, setTableGranularity, setTableAssetColumnsEnabled, setSpreadsheetMode, simulationMode } = useAppStore();
+    const { manual, monteCarlo, status } = simulationResults;
     const { tableGranularity, tableAssetColumnsEnabled, spreadsheetMode } = ui;
     const [sorting, setSorting] = React.useState([]);
     const formatCurrency = (cents) => `$${Math.round(cents / 100).toLocaleString()}`;
     const data = useMemo(() => {
-        if (!manual)
+        const activeResult = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
+        if (!activeResult)
             return [];
+        let rows = [];
+        if (activeResult.kind === 'monte-carlo') {
+            rows = activeResult.percentiles.p50;
+        }
+        else {
+            rows = activeResult.rows;
+        }
         if (tableGranularity === 'monthly')
-            return manual.rows;
+            return rows;
         // Annual aggregation
         const annualRows = [];
-        for (let i = 0; i < manual.rows.length; i += 12) {
-            const yearMonths = manual.rows.slice(i, i + 12);
+        for (let i = 0; i < rows.length; i += 12) {
+            const yearMonths = rows.slice(i, i + 12);
             if (yearMonths.length === 0)
                 break;
             const firstMonth = yearMonths[0];
@@ -51,7 +59,7 @@ export const DetailTable = () => {
             annualRows.push(aggregatedRow);
         }
         return annualRows;
-    }, [manual, tableGranularity]);
+    }, [manual, monteCarlo, tableGranularity, simulationMode]);
     const columns = useMemo(() => [
         columnHelper.accessor('month', {
             header: ({ column }) => (_jsxs("button", { className: "flex items-center gap-1 hover:text-slate-700 transition-colors w-full", onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'), children: ["Period", {
@@ -62,8 +70,10 @@ export const DetailTable = () => {
             size: 120,
         }),
         columnHelper.accessor((row) => {
+            const activeResult = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
+            const rows = activeResult?.kind === 'monte-carlo' ? activeResult.percentiles.p50 : activeResult?.rows;
             const startAge = useAppStore.getState().coreParams.startingAge;
-            const index = manual?.rows.findIndex(r => r.month === row.month) ?? -1;
+            const index = rows?.findIndex((r) => r.month === row.month) ?? -1;
             if (index === -1) {
                 const yearMatch = row.month.match(/Year (\d+)/);
                 if (yearMatch)
@@ -131,7 +141,7 @@ export const DetailTable = () => {
             cell: (info) => _jsx("span", { className: "font-bold", children: formatCurrency(info.getValue()) }),
             size: 140,
         }),
-    ], [tableAssetColumnsEnabled, manual, tableGranularity]);
+    ], [tableAssetColumnsEnabled, manual, monteCarlo, tableGranularity, simulationMode]);
     const table = useReactTable({
         data,
         columns,
@@ -148,13 +158,14 @@ export const DetailTable = () => {
         count: rows.length,
         getScrollElement: () => tableContainerRef.current,
         estimateSize: () => 40,
-        overscan: spreadsheetMode ? rows.length : 10, // Render all if spreadsheet mode
-        enabled: !spreadsheetMode, // Actually disable virtualizer logic if not needed
+        overscan: spreadsheetMode ? rows.length : 10,
+        enabled: !spreadsheetMode,
     });
-    if (!manual || status === 'idle')
+    const activeResult = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
+    if (!activeResult || status === 'idle')
         return null;
     const tableWidth = table.getTotalSize();
-    return (_jsxs("div", { className: `flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden`, children: [_jsxs("div", { className: "flex items-center justify-between mb-2", children: [_jsxs("h3", { className: "text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2", children: [_jsx(Table, { size: 16, className: "text-blue-600" }), "Detail Ledger"] }), _jsxs("div", { className: "flex items-center gap-4", children: [_jsx(SegmentedToggle, { size: "sm", options: [
+    return (_jsxs("div", { className: "flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between mb-2", children: [_jsxs("div", { children: [_jsxs("h3", { className: "text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2", children: [_jsx(Table, { size: 16, className: "text-blue-600" }), simulationMode === SimulationMode.MONTE_CARLO ? 'Detail Ledger (Median Path)' : 'Detail Ledger'] }), simulationMode === SimulationMode.MONTE_CARLO && (_jsx("p", { className: "text-[10px] text-slate-400 mt-0.5 ml-6 italic", children: "Showing values for the 50th percentile outcome" }))] }), _jsxs("div", { className: "flex items-center gap-4", children: [_jsx(SegmentedToggle, { size: "sm", options: [
                                     { label: 'Annual', value: 'annual' },
                                     { label: 'Monthly', value: 'monthly' },
                                 ], value: tableGranularity, onChange: (val) => setTableGranularity(val) }), _jsxs("button", { onClick: () => setTableAssetColumnsEnabled(!tableAssetColumnsEnabled), className: `
@@ -175,14 +186,10 @@ export const DetailTable = () => {
                                 position: 'relative',
                                 width: tableWidth,
                                 minWidth: '100%'
-                            }, children: spreadsheetMode ? (
-                            // Spreadsheet Mode: Render all rows directly
-                            table.getRowModel().rows.map((row) => (_jsx("tr", { className: "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex w-full", children: row.getVisibleCells().map((cell, index) => (_jsx("td", { style: { width: cell.column.getSize(), minWidth: cell.column.getSize() }, className: `
+                            }, children: spreadsheetMode ? (table.getRowModel().rows.map((row) => (_jsx("tr", { className: "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex w-full", children: row.getVisibleCells().map((cell, index) => (_jsx("td", { style: { width: cell.column.getSize(), minWidth: cell.column.getSize() }, className: `
                         px-4 py-3 tabular-nums text-slate-600 whitespace-nowrap bg-inherit shrink-0
                         ${index === 0 ? 'sticky left-0 z-20 bg-white group-hover:bg-slate-50 font-bold border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}
-                      `, children: flexRender(cell.column.columnDef.cell, cell.getContext()) }, cell.id))) }, row.id)))) : (
-                            // Normal Mode: Virtualized rendering
-                            rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                      `, children: flexRender(cell.column.columnDef.cell, cell.getContext()) }, cell.id))) }, row.id)))) : (rowVirtualizer.getVirtualItems().map((virtualRow) => {
                                 const row = rows[virtualRow.index];
                                 return (_jsx("tr", { "data-index": virtualRow.index, ref: (node) => rowVirtualizer.measureElement(node), className: "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex", style: {
                                         position: 'absolute',

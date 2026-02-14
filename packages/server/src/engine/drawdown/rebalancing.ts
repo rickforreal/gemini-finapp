@@ -1,4 +1,4 @@
-import { AssetClass } from '@shared/constants/enums';
+import { AssetClass } from '@shared';
 import { DrawdownResult } from './bucket';
 
 /**
