@@ -10,6 +10,7 @@ export interface UISlice {
             end: number;
         } | null;
         reforecastStatus: 'idle' | 'pending' | 'complete';
+        spreadsheetMode: boolean;
     };
     setChartDisplayMode: (mode: 'nominal' | 'real') => void;
     setChartBreakdownEnabled: (enabled: boolean) => void;
@@ -20,5 +21,6 @@ export interface UISlice {
         end: number;
     } | null) => void;
     setReforecastStatus: (status: 'idle' | 'pending' | 'complete') => void;
+    setSpreadsheetMode: (enabled: boolean) => void;
 }
 export declare const createUISlice: StateCreator<UISlice>;

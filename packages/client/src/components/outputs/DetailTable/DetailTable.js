@@ -5,12 +5,12 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../../store/useAppStore';
 import { AssetClass } from '@shared/index';
 import { SegmentedToggle } from '../../shared/SegmentedToggle';
-import { Table, PieChart as PieChartIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Table, PieChart as PieChartIcon, ArrowUpDown, ArrowUp, ArrowDown, Maximize2, Minimize2 } from 'lucide-react';
 const columnHelper = createColumnHelper();
 export const DetailTable = () => {
-    const { simulationResults, ui, setTableGranularity, setTableAssetColumnsEnabled } = useAppStore();
+    const { simulationResults, ui, setTableGranularity, setTableAssetColumnsEnabled, setSpreadsheetMode } = useAppStore();
     const { manual, status } = simulationResults;
-    const { tableGranularity, tableAssetColumnsEnabled } = ui;
+    const { tableGranularity, tableAssetColumnsEnabled, spreadsheetMode } = ui;
     const [sorting, setSorting] = React.useState([]);
     const formatCurrency = (cents) => `$${Math.round(cents / 100).toLocaleString()}`;
     const data = useMemo(() => {
@@ -63,10 +63,8 @@ export const DetailTable = () => {
         }),
         columnHelper.accessor((row) => {
             const startAge = useAppStore.getState().coreParams.startingAge;
-            // Find index in original data to get correct age
             const index = manual?.rows.findIndex(r => r.month === row.month) ?? -1;
             if (index === -1) {
-                // If it's an annual row like "Year X", calculate from X
                 const yearMatch = row.month.match(/Year (\d+)/);
                 if (yearMatch)
                     return startAge + parseInt(yearMatch[1]) - 1;
@@ -150,13 +148,13 @@ export const DetailTable = () => {
         count: rows.length,
         getScrollElement: () => tableContainerRef.current,
         estimateSize: () => 40,
-        overscan: 10,
+        overscan: spreadsheetMode ? rows.length : 10, // Render all if spreadsheet mode
+        enabled: !spreadsheetMode, // Actually disable virtualizer logic if not needed
     });
     if (!manual || status === 'idle')
         return null;
-    // Calculate total width for absolute rows
     const tableWidth = table.getTotalSize();
-    return (_jsxs("div", { className: "flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between mb-2", children: [_jsxs("h3", { className: "text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2", children: [_jsx(Table, { size: 16, className: "text-blue-600" }), "Detail Ledger"] }), _jsxs("div", { className: "flex items-center gap-4", children: [_jsx(SegmentedToggle, { size: "sm", options: [
+    return (_jsxs("div", { className: `flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden`, children: [_jsxs("div", { className: "flex items-center justify-between mb-2", children: [_jsxs("h3", { className: "text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2", children: [_jsx(Table, { size: 16, className: "text-blue-600" }), "Detail Ledger"] }), _jsxs("div", { className: "flex items-center gap-4", children: [_jsx(SegmentedToggle, { size: "sm", options: [
                                     { label: 'Annual', value: 'annual' },
                                     { label: 'Monthly', value: 'monthly' },
                                 ], value: tableGranularity, onChange: (val) => setTableGranularity(val) }), _jsxs("button", { onClick: () => setTableAssetColumnsEnabled(!tableAssetColumnsEnabled), className: `
@@ -164,15 +162,27 @@ export const DetailTable = () => {
               ${tableAssetColumnsEnabled
                                     ? 'bg-blue-50 text-blue-600 border border-blue-100'
                                     : 'text-slate-500 hover:bg-slate-50 border border-transparent'}
-            `, children: [_jsx(PieChartIcon, { size: 14 }), "Show Assets"] })] })] }), _jsx("div", { ref: tableContainerRef, className: "w-full h-[600px] overflow-auto border border-slate-100 rounded-lg relative scrollbar-thin scrollbar-thumb-slate-200", children: _jsxs("table", { className: "border-collapse text-left text-xs", style: { width: tableWidth, minWidth: '100%' }, children: [_jsx("thead", { className: "sticky top-0 z-30 bg-slate-50 border-b border-slate-200 shadow-sm", children: table.getHeaderGroups().map(headerGroup => (_jsx("tr", { className: "flex w-full", children: headerGroup.headers.map((header, index) => (_jsx("th", { style: { width: header.getSize(), minWidth: header.getSize() }, className: `
+            `, children: [_jsx(PieChartIcon, { size: 14 }), "Show Assets"] }), _jsxs("button", { onClick: () => setSpreadsheetMode(!spreadsheetMode), className: `
+              flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors
+              ${spreadsheetMode
+                                    ? 'bg-slate-800 text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-50 border border-transparent'}
+            `, children: [spreadsheetMode ? _jsx(Minimize2, { size: 14 }) : _jsx(Maximize2, { size: 14 }), spreadsheetMode ? 'Compact View' : 'Spreadsheet Mode'] })] })] }), _jsx("div", { ref: tableContainerRef, className: `w-full overflow-auto border border-slate-100 rounded-lg relative scrollbar-thin scrollbar-thumb-slate-200 ${spreadsheetMode ? 'h-auto' : 'h-[600px]'}`, children: _jsxs("table", { className: "border-collapse text-left text-xs", style: { width: tableWidth, minWidth: '100%' }, children: [_jsx("thead", { className: "sticky top-0 z-30 bg-slate-50 border-b border-slate-200 shadow-sm", children: table.getHeaderGroups().map(headerGroup => (_jsx("tr", { className: "flex w-full", children: headerGroup.headers.map((header, index) => (_jsx("th", { style: { width: header.getSize(), minWidth: header.getSize() }, className: `
                       px-4 py-3 font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50 shrink-0
                       ${index === 0 ? 'sticky left-0 z-40 border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}
                     `, children: flexRender(header.column.columnDef.header, header.getContext()) }, header.id))) }, headerGroup.id))) }), _jsx("tbody", { style: {
-                                height: `${rowVirtualizer.getTotalSize()}px`,
+                                height: spreadsheetMode ? 'auto' : `${rowVirtualizer.getTotalSize()}px`,
                                 position: 'relative',
                                 width: tableWidth,
                                 minWidth: '100%'
-                            }, children: rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                            }, children: spreadsheetMode ? (
+                            // Spreadsheet Mode: Render all rows directly
+                            table.getRowModel().rows.map((row) => (_jsx("tr", { className: "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex w-full", children: row.getVisibleCells().map((cell, index) => (_jsx("td", { style: { width: cell.column.getSize(), minWidth: cell.column.getSize() }, className: `
+                        px-4 py-3 tabular-nums text-slate-600 whitespace-nowrap bg-inherit shrink-0
+                        ${index === 0 ? 'sticky left-0 z-20 bg-white group-hover:bg-slate-50 font-bold border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}
+                      `, children: flexRender(cell.column.columnDef.cell, cell.getContext()) }, cell.id))) }, row.id)))) : (
+                            // Normal Mode: Virtualized rendering
+                            rowVirtualizer.getVirtualItems().map((virtualRow) => {
                                 const row = rows[virtualRow.index];
                                 return (_jsx("tr", { "data-index": virtualRow.index, ref: (node) => rowVirtualizer.measureElement(node), className: "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex", style: {
                                         position: 'absolute',
@@ -181,8 +191,8 @@ export const DetailTable = () => {
                                         transform: `translateY(${virtualRow.start}px)`,
                                         width: '100%',
                                     }, children: row.getVisibleCells().map((cell, index) => (_jsx("td", { style: { width: cell.column.getSize(), minWidth: cell.column.getSize() }, className: `
-                        px-4 py-3 tabular-nums text-slate-600 whitespace-nowrap bg-inherit shrink-0
-                        ${index === 0 ? 'sticky left-0 z-20 bg-white group-hover:bg-slate-50 font-bold border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}
-                      `, children: flexRender(cell.column.columnDef.cell, cell.getContext()) }, cell.id))) }, row.id));
-                            }) })] }) })] }));
+                          px-4 py-3 tabular-nums text-slate-600 whitespace-nowrap bg-inherit shrink-0
+                          ${index === 0 ? 'sticky left-0 z-20 bg-white group-hover:bg-slate-50 font-bold border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}
+                        `, children: flexRender(cell.column.columnDef.cell, cell.getContext()) }, cell.id))) }, row.id));
+                            })) })] }) })] }));
 };

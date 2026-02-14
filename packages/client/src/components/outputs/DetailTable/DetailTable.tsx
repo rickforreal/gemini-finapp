@@ -11,7 +11,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../../store/useAppStore';
 import { MonthRow, AssetClass } from '@shared/index';
 import { SegmentedToggle } from '../../shared/SegmentedToggle';
-import { Table, PieChart as PieChartIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Table, PieChart as PieChartIcon, ArrowUpDown, ArrowUp, ArrowDown, Maximize2, Minimize2 } from 'lucide-react';
 
 const columnHelper = createColumnHelper<MonthRow>();
 
@@ -20,11 +20,12 @@ export const DetailTable: React.FC = () => {
     simulationResults, 
     ui, 
     setTableGranularity, 
-    setTableAssetColumnsEnabled 
+    setTableAssetColumnsEnabled,
+    setSpreadsheetMode
   } = useAppStore();
   
   const { manual, status } = simulationResults;
-  const { tableGranularity, tableAssetColumnsEnabled } = ui;
+  const { tableGranularity, tableAssetColumnsEnabled, spreadsheetMode } = ui;
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -91,10 +92,8 @@ export const DetailTable: React.FC = () => {
     }),
     columnHelper.accessor((row) => {
       const startAge = useAppStore.getState().coreParams.startingAge;
-      // Find index in original data to get correct age
       const index = manual?.rows.findIndex(r => r.month === row.month) ?? -1;
       if (index === -1) {
-        // If it's an annual row like "Year X", calculate from X
         const yearMatch = row.month.match(/Year (\d+)/);
         if (yearMatch) return startAge + parseInt(yearMatch[1]) - 1;
         return startAge;
@@ -192,16 +191,16 @@ export const DetailTable: React.FC = () => {
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 40,
-    overscan: 10,
+    overscan: spreadsheetMode ? rows.length : 10, // Render all if spreadsheet mode
+    enabled: !spreadsheetMode, // Actually disable virtualizer logic if not needed
   });
 
   if (!manual || status === 'idle') return null;
 
-  // Calculate total width for absolute rows
   const tableWidth = table.getTotalSize();
 
   return (
-    <div className="flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden">
+    <div className={`flex flex-col gap-4 w-full bg-white border border-slate-200 rounded-xl p-6 shadow-sm overflow-hidden`}>
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
           <Table size={16} className="text-blue-600" />
@@ -230,12 +229,24 @@ export const DetailTable: React.FC = () => {
             <PieChartIcon size={14} />
             Show Assets
           </button>
+          <button
+            onClick={() => setSpreadsheetMode(!spreadsheetMode)}
+            className={`
+              flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors
+              ${spreadsheetMode 
+                ? 'bg-slate-800 text-white shadow-sm' 
+                : 'text-slate-500 hover:bg-slate-50 border border-transparent'}
+            `}
+          >
+            {spreadsheetMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {spreadsheetMode ? 'Compact View' : 'Spreadsheet Mode'}
+          </button>
         </div>
       </div>
 
       <div 
         ref={tableContainerRef}
-        className="w-full h-[600px] overflow-auto border border-slate-100 rounded-lg relative scrollbar-thin scrollbar-thumb-slate-200"
+        className={`w-full overflow-auto border border-slate-100 rounded-lg relative scrollbar-thin scrollbar-thumb-slate-200 ${spreadsheetMode ? 'h-auto' : 'h-[600px]'}`}
       >
         <table className="border-collapse text-left text-xs" style={{ width: tableWidth, minWidth: '100%' }}>
           <thead className="sticky top-0 z-30 bg-slate-50 border-b border-slate-200 shadow-sm">
@@ -258,27 +269,18 @@ export const DetailTable: React.FC = () => {
           </thead>
           <tbody
             style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
+              height: spreadsheetMode ? 'auto' : `${rowVirtualizer.getTotalSize()}px`,
               position: 'relative',
               width: tableWidth,
               minWidth: '100%'
             }}
           >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const row = rows[virtualRow.index];
-              return (
+            {spreadsheetMode ? (
+              // Spreadsheet Mode: Render all rows directly
+              table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  data-index={virtualRow.index}
-                  ref={(node) => rowVirtualizer.measureElement(node)}
-                  className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    transform: `translateY(${virtualRow.start}px)`,
-                    width: '100%',
-                  }}
+                  className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex w-full"
                 >
                   {row.getVisibleCells().map((cell, index) => (
                     <td 
@@ -293,8 +295,41 @@ export const DetailTable: React.FC = () => {
                     </td>
                   ))}
                 </tr>
-              );
-            })}
+              ))
+            ) : (
+              // Normal Mode: Virtualized rendering
+              rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                return (
+                  <tr
+                    key={row.id}
+                    data-index={virtualRow.index}
+                    ref={(node) => rowVirtualizer.measureElement(node)}
+                    className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group flex"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      transform: `translateY(${virtualRow.start}px)`,
+                      width: '100%',
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell, index) => (
+                      <td 
+                        key={cell.id} 
+                        style={{ width: cell.column.getSize(), minWidth: cell.column.getSize() }}
+                        className={`
+                          px-4 py-3 tabular-nums text-slate-600 whitespace-nowrap bg-inherit shrink-0
+                          ${index === 0 ? 'sticky left-0 z-20 bg-white group-hover:bg-slate-50 font-bold border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}
+                        `}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

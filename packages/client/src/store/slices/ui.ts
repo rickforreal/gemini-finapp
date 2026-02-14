@@ -8,6 +8,7 @@ export interface UISlice {
     tableAssetColumnsEnabled: boolean;
     chartZoom: { start: number; end: number } | null;
     reforecastStatus: 'idle' | 'pending' | 'complete';
+    spreadsheetMode: boolean;
   };
   setChartDisplayMode: (mode: 'nominal' | 'real') => void;
   setChartBreakdownEnabled: (enabled: boolean) => void;
@@ -15,6 +16,7 @@ export interface UISlice {
   setTableAssetColumnsEnabled: (enabled: boolean) => void;
   setChartZoom: (zoom: { start: number; end: number } | null) => void;
   setReforecastStatus: (status: 'idle' | 'pending' | 'complete') => void;
+  setSpreadsheetMode: (enabled: boolean) => void;
 }
 
 export const createUISlice: StateCreator<UISlice> = (set) => ({
@@ -25,6 +27,7 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
     tableAssetColumnsEnabled: false,
     chartZoom: null,
     reforecastStatus: 'idle',
+    spreadsheetMode: false,
   },
   setChartDisplayMode: (chartDisplayMode) =>
     set((state) => ({ ui: { ...state.ui, chartDisplayMode } })),
@@ -38,4 +41,6 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
     set((state) => ({ ui: { ...state.ui, chartZoom } })),
   setReforecastStatus: (reforecastStatus) =>
     set((state) => ({ ui: { ...state.ui, reforecastStatus } })),
+  setSpreadsheetMode: (spreadsheetMode) =>
+    set((state) => ({ ui: { ...state.ui, spreadsheetMode } })),
 });

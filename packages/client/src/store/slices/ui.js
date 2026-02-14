@@ -6,6 +6,7 @@ export const createUISlice = (set) => ({
         tableAssetColumnsEnabled: false,
         chartZoom: null,
         reforecastStatus: 'idle',
+        spreadsheetMode: false,
     },
     setChartDisplayMode: (chartDisplayMode) => set((state) => ({ ui: { ...state.ui, chartDisplayMode } })),
     setChartBreakdownEnabled: (chartBreakdownEnabled) => set((state) => ({ ui: { ...state.ui, chartBreakdownEnabled } })),
@@ -13,4 +14,5 @@ export const createUISlice = (set) => ({
     setTableAssetColumnsEnabled: (tableAssetColumnsEnabled) => set((state) => ({ ui: { ...state.ui, tableAssetColumnsEnabled } })),
     setChartZoom: (chartZoom) => set((state) => ({ ui: { ...state.ui, chartZoom } })),
     setReforecastStatus: (reforecastStatus) => set((state) => ({ ui: { ...state.ui, reforecastStatus } })),
+    setSpreadsheetMode: (spreadsheetMode) => set((state) => ({ ui: { ...state.ui, spreadsheetMode } })),
 });

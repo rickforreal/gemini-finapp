@@ -1,3 +1,9 @@
+## 2026-02-14 19:15 — P7-T6 | COMPLETE
+
+Completed Phase 7 enhancement: Spreadsheet Mode. Implemented a toggle for the Detail Table that disables virtualization and fixed heights, allowing the table to expand fully and render all rows inline without an internal scrollbar.
+
+[DECISION] Conditionally disabled TanStack Virtual when spreadsheetMode is active to improve performance for full-page renders.
+
 ## 2026-02-14 18:50 — P7-T6 | COMPLETE
 
 Verified Phase 7 implementation. Successfully implemented Rebalancing drawdown with Glide Path interpolation and integrated Income/Expense event processing with inflation escalation.
