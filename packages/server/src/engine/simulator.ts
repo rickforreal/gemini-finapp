@@ -205,7 +205,7 @@ export function simulateRetirement(
   const summary = {
     endOfHorizon: {
       nominalEndBalance: (Object.values(finalRow.endBalances) as number[]).reduce((a, b) => a + b, 0),
-      realEndBalance: roundToCents((Object.values(finalRow.endBalances) as number[]).reduce((a, b) => a + b, 0) / Math.pow(1 + annualInflationRate, Math.floor(durationMonths / 12))),
+      realEndBalance: roundToCents((Object.values(finalRow.endBalances) as number[]).reduce((a, b) => a + b, 0) / Math.pow(1 + annualInflationRate, durationMonths / 12)),
     },
     withdrawals: {
       totalNominal: totalNominalWithdrawal,
