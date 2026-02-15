@@ -27,11 +27,14 @@ export async function runMonteCarlo(config: SimulationConfig): Promise<MonteCarl
   const terminalValues = new Float64Array(iterations);
   let successes = 0;
 
-  // We only need to store the specific fields we care about for percentile calculation
-  // to save memory and reduce GC pressure.
+  // Pre-allocate typed arrays for all metrics needed for the table/chart
+  const allStartBalances = new Float64Array(iterations * durationMonths);
   const allEndBalances = new Float64Array(iterations * durationMonths);
   const allNominalWithdrawals = new Float64Array(iterations * durationMonths);
   const allRealWithdrawals = new Float64Array(iterations * durationMonths);
+  const allNominalChanges = new Float64Array(iterations * durationMonths);
+  const allIncomeTotals = new Float64Array(iterations * durationMonths);
+  const allExpenseTotals = new Float64Array(iterations * durationMonths);
 
   for (let i = 0; i < iterations; i++) {
     const sampledReturns = [];
@@ -55,10 +58,18 @@ export async function runMonteCarlo(config: SimulationConfig): Promise<MonteCarl
     const rows = pathResult.rows;
     for (let m = 0; m < durationMonths; m++) {
       const row = rows[m];
+      const idx = i * durationMonths + m;
+      
+      const totalStart = row.startBalances.stocks + row.startBalances.bonds + row.startBalances.cash;
       const totalEnd = row.endBalances.stocks + row.endBalances.bonds + row.endBalances.cash;
-      allEndBalances[i * durationMonths + m] = totalEnd;
-      allNominalWithdrawals[i * durationMonths + m] = row.withdrawals.nominalTotal;
-      allRealWithdrawals[i * durationMonths + m] = row.withdrawals.realTotal;
+      
+      allStartBalances[idx] = totalStart;
+      allEndBalances[idx] = totalEnd;
+      allNominalWithdrawals[idx] = row.withdrawals.nominalTotal;
+      allRealWithdrawals[idx] = row.withdrawals.realTotal;
+      allNominalChanges[idx] = row.movement.nominalChange;
+      allIncomeTotals[idx] = row.cashflows.incomeTotal;
+      allExpenseTotals[idx] = row.cashflows.expenseTotal;
     }
 
     const terminalValue = pathResult.summary.endOfHorizon.nominalEndBalance;
@@ -77,28 +88,54 @@ export async function runMonteCarlo(config: SimulationConfig): Promise<MonteCarl
   }
 
   const firstPathMonthNames = loadHistoricalData().slice(0, durationMonths).map((_, i) => {
-    // This is just to get the month keys correctly
     return addMonthsToKey(config.calendar.startMonth, i);
   });
 
-  for (let m = 0; m < durationMonths; m++) {
-    const monthEndBalances = new Float64Array(iterations);
-    const monthNominalWithdrawals = new Float64Array(iterations);
-    const monthRealWithdrawals = new Float64Array(iterations);
+  // Reusable buffers for monthly percentile calculation
+  const monthStartBalances = new Float64Array(iterations);
+  const monthEndBalances = new Float64Array(iterations);
+  const monthNominalWithdrawals = new Float64Array(iterations);
+  const monthRealWithdrawals = new Float64Array(iterations);
+  const monthNominalChanges = new Float64Array(iterations);
+  const monthIncomeTotals = new Float64Array(iterations);
+  const monthExpenseTotals = new Float64Array(iterations);
 
+  for (let m = 0; m < durationMonths; m++) {
     for (let i = 0; i < iterations; i++) {
-      monthEndBalances[i] = allEndBalances[i * durationMonths + m];
-      monthNominalWithdrawals[i] = allNominalWithdrawals[i * durationMonths + m];
-      monthRealWithdrawals[i] = allRealWithdrawals[i * durationMonths + m];
+      const idx = i * durationMonths + m;
+      monthStartBalances[i] = allStartBalances[idx];
+      monthEndBalances[i] = allEndBalances[idx];
+      monthNominalWithdrawals[i] = allNominalWithdrawals[idx];
+      monthRealWithdrawals[i] = allRealWithdrawals[idx];
+      monthNominalChanges[i] = allNominalChanges[idx];
+      monthIncomeTotals[i] = allIncomeTotals[idx];
+      monthExpenseTotals[i] = allExpenseTotals[idx];
     }
 
     for (const p of ps) {
+      const pStart = calculatePercentile(Array.from(monthStartBalances), p);
+      const pEnd = calculatePercentile(Array.from(monthEndBalances), p);
+      const pNominalChange = calculatePercentile(Array.from(monthNominalChanges), p);
+      
+      // Calculate derived percent change for the synthetic path
+      const pPercentChange = pStart > 0 ? pNominalChange / pStart : 0;
+
       percentileResults[`p${p}`].push({
         month: firstPathMonthNames[m],
-        startBalances: { [AssetClass.STOCKS]: 0, [AssetClass.BONDS]: 0, [AssetClass.CASH]: 0 },
-        endBalances: { [AssetClass.STOCKS]: 0, [AssetClass.BONDS]: 0, [AssetClass.CASH]: calculatePercentile(Array.from(monthEndBalances), p) },
-        movement: { nominalChange: 0, percentChange: 0 },
-        cashflows: { incomeTotal: 0, expenseTotal: 0 },
+        // Put totals in CASH for simplicity in asset columns (or handle splitting later)
+        // Table mainly looks at totals or specific asset columns. 
+        // For synthetic paths, asset breakdown is tricky. 
+        // We'll zero stocks/bonds and put total in cash to ensure total matches.
+        startBalances: { [AssetClass.STOCKS]: 0, [AssetClass.BONDS]: 0, [AssetClass.CASH]: pStart },
+        endBalances: { [AssetClass.STOCKS]: 0, [AssetClass.BONDS]: 0, [AssetClass.CASH]: pEnd },
+        movement: { 
+          nominalChange: pNominalChange,
+          percentChange: pPercentChange 
+        },
+        cashflows: { 
+          incomeTotal: calculatePercentile(Array.from(monthIncomeTotals), p), 
+          expenseTotal: calculatePercentile(Array.from(monthExpenseTotals), p) 
+        },
         withdrawals: {
           byAsset: { [AssetClass.STOCKS]: 0, [AssetClass.BONDS]: 0, [AssetClass.CASH]: 0 },
           nominalTotal: calculatePercentile(Array.from(monthNominalWithdrawals), p),

@@ -3,8 +3,9 @@ import { useAppStore } from '../../../store/useAppStore';
 import { StatCard } from './StatCard';
 import { SimulationMode } from '@shared';
 export const SummaryStatsBar = () => {
-    const { simulationResults, simulationMode } = useAppStore();
+    const { simulationResults, simulationMode, ui } = useAppStore();
     const { manual, monteCarlo, status } = simulationResults;
+    const { chartDisplayMode } = ui;
     const activeResult = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
     const cardCount = simulationMode === SimulationMode.MONTE_CARLO ? 9 : 8;
     if (!activeResult || status === 'idle' || status === 'running') {
@@ -15,5 +16,10 @@ export const SummaryStatsBar = () => {
     const successRate = simulationMode === SimulationMode.MONTE_CARLO
         ? ((monteCarlo?.probabilityOfSuccess || 0) * 100).toFixed(1) + '%'
         : null;
-    return (_jsxs("div", { className: `grid grid-cols-2 md:grid-cols-4 ${simulationMode === SimulationMode.MONTE_CARLO ? 'xl:grid-cols-9' : 'xl:grid-cols-8'} gap-3 w-full`, children: [_jsx(StatCard, { label: "Total Nominal", value: formatCurrency(summary.withdrawals.totalNominal) }), _jsx(StatCard, { label: "Total Real", value: formatCurrency(summary.withdrawals.totalReal) }), _jsx(StatCard, { label: "Median", value: formatCurrency(summary.withdrawals.medianMonthlyNominal) }), _jsx(StatCard, { label: "Mean", value: formatCurrency(summary.withdrawals.meanMonthlyNominal) }), _jsx(StatCard, { label: "Std. Dev.", value: formatCurrency(summary.withdrawals.stdDevMonthlyNominal) }), _jsx(StatCard, { label: "25th Pct", value: formatCurrency(summary.withdrawals.p25MonthlyNominal) }), _jsx(StatCard, { label: "75th Pct", value: formatCurrency(summary.withdrawals.p75MonthlyNominal) }), _jsx(StatCard, { label: "Terminal", value: formatCurrency(summary.endOfHorizon.nominalEndBalance), type: "terminal", isSuccess: summary.endOfHorizon.nominalEndBalance > 0 }), simulationMode === SimulationMode.MONTE_CARLO && (_jsx(StatCard, { label: "Success Rate", value: successRate || '0%', type: "terminal", isSuccess: (monteCarlo?.probabilityOfSuccess || 0) >= 0.9 }))] }));
+    // Determine Terminal Value based on display mode
+    const terminalValue = chartDisplayMode === 'real'
+        ? summary.endOfHorizon.realEndBalance
+        : summary.endOfHorizon.nominalEndBalance;
+    const terminalLabel = chartDisplayMode === 'real' ? 'Terminal (Real)' : 'Terminal (Nominal)';
+    return (_jsxs("div", { className: `grid grid-cols-2 md:grid-cols-4 ${simulationMode === SimulationMode.MONTE_CARLO ? 'xl:grid-cols-9' : 'xl:grid-cols-8'} gap-3 w-full`, children: [_jsx(StatCard, { label: "Total Nominal", value: formatCurrency(summary.withdrawals.totalNominal) }), _jsx(StatCard, { label: "Total Real", value: formatCurrency(summary.withdrawals.totalReal) }), _jsx(StatCard, { label: "Median", value: formatCurrency(summary.withdrawals.medianMonthlyNominal) }), _jsx(StatCard, { label: "Mean", value: formatCurrency(summary.withdrawals.meanMonthlyNominal) }), _jsx(StatCard, { label: "Std. Dev.", value: formatCurrency(summary.withdrawals.stdDevMonthlyNominal) }), _jsx(StatCard, { label: "25th Pct", value: formatCurrency(summary.withdrawals.p25MonthlyNominal) }), _jsx(StatCard, { label: "75th Pct", value: formatCurrency(summary.withdrawals.p75MonthlyNominal) }), _jsx(StatCard, { label: terminalLabel, value: formatCurrency(terminalValue), type: "terminal", isSuccess: terminalValue > 0 }), simulationMode === SimulationMode.MONTE_CARLO && (_jsx(StatCard, { label: "Success Rate", value: successRate || '0%', type: "terminal", isSuccess: (monteCarlo?.probabilityOfSuccess || 0) >= 0.9 }))] }));
 };

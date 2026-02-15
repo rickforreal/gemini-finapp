@@ -4,8 +4,9 @@ import { StatCard } from './StatCard';
 import { SimulationMode } from '@shared';
 
 export const SummaryStatsBar: React.FC = () => {
-  const { simulationResults, simulationMode } = useAppStore();
+  const { simulationResults, simulationMode, ui } = useAppStore();
   const { manual, monteCarlo, status } = simulationResults;
+  const { chartDisplayMode } = ui;
 
   const activeResult = simulationMode === SimulationMode.MONTE_CARLO ? monteCarlo : manual;
   const cardCount = simulationMode === SimulationMode.MONTE_CARLO ? 9 : 8;
@@ -27,6 +28,13 @@ export const SummaryStatsBar: React.FC = () => {
   const successRate = simulationMode === SimulationMode.MONTE_CARLO 
     ? ((monteCarlo?.probabilityOfSuccess || 0) * 100).toFixed(1) + '%'
     : null;
+
+  // Determine Terminal Value based on display mode
+  const terminalValue = chartDisplayMode === 'real' 
+    ? summary.endOfHorizon.realEndBalance
+    : summary.endOfHorizon.nominalEndBalance;
+  
+  const terminalLabel = chartDisplayMode === 'real' ? 'Terminal (Real)' : 'Terminal (Nominal)';
 
   return (
     <div className={`grid grid-cols-2 md:grid-cols-4 ${simulationMode === SimulationMode.MONTE_CARLO ? 'xl:grid-cols-9' : 'xl:grid-cols-8'} gap-3 w-full`}>
@@ -59,10 +67,10 @@ export const SummaryStatsBar: React.FC = () => {
         value={formatCurrency(summary.withdrawals.p75MonthlyNominal)} 
       />
       <StatCard 
-        label="Terminal" 
-        value={formatCurrency(summary.endOfHorizon.nominalEndBalance)}
+        label={terminalLabel} 
+        value={formatCurrency(terminalValue)}
         type="terminal"
-        isSuccess={summary.endOfHorizon.nominalEndBalance > 0}
+        isSuccess={terminalValue > 0}
       />
       {simulationMode === SimulationMode.MONTE_CARLO && (
         <StatCard 
